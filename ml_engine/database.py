@@ -1,29 +1,20 @@
-"""
-Database module for Career Navigator AI Academic Analytics & Guidance Platform.
-Uses SQLite and SQLAlchemy for persistent student profiles, semester grade tracking,
-career assessment history, and interactive 6-phase roadmap task progress.
-"""
-
 import os
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict,Any,List,Optional
 
-from sqlalchemy import (
-    create_engine, Column, Integer, Float, String, Boolean, DateTime, JSON, ForeignKey, func
-)
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship, scoped_session
+from sqlalchemy import create_engine,Column,Integer,Float,String,Boolean,DateTime,JSON,ForeignKey,func
+from sqlalchemy.orm import declarative_base,sessionmaker,relationship,scoped_session
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "career_navigator.db")
-DATABASE_URI = f"sqlite:///{DB_PATH}"
+BASE_DIR=os.path.dirname(os.path.abspath(__file__))
+DB_PATH=os.path.join(BASE_DIR,"career_navigator.db")
+DATABASE_URI=f"sqlite:///{DB_PATH}"
 
-engine = create_engine(DATABASE_URI, connect_args={"check_same_thread": False})
-SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
-Base = declarative_base()
+engine=create_engine(DATABASE_URI,connect_args={"check_same_thread": False})
+SessionLocal=scoped_session(sessionmaker(autocommit=False,autoflush=False,bind=engine))
+Base=declarative_base()
 
 
 class Student(Base):
-    """Stores student profile metadata."""
     __tablename__ = "students"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -33,28 +24,24 @@ class Student(Base):
     academic_year = Column(String(20), default="3rd Year")
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # Relationships
     assessments = relationship("CareerAssessment", back_populates="student", cascade="all, delete-orphan")
 
 
 class CareerAssessment(Base):
-    """Stores each ML career prediction and pillar evaluation."""
     __tablename__ = "career_assessments"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
     predicted_role = Column(String(100), nullable=False)
-    pillar_stats = Column(JSON, default=dict)       # Scores across 9 pillars
-    grades_snapshot = Column(JSON, default=dict)    # Subject-wise grades entered
+    pillar_stats = Column(JSON, default=dict)
+    grades_snapshot = Column(JSON, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # Relationships
     student = relationship("Student", back_populates="assessments")
     milestones = relationship("RoadmapMilestone", back_populates="assessment", cascade="all, delete-orphan")
 
 
 class RoadmapMilestone(Base):
-    """Stores actionable checklist tasks for the student's customized roadmap."""
     __tablename__ = "roadmap_milestones"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -65,12 +52,10 @@ class RoadmapMilestone(Base):
     is_completed = Column(Boolean, default=False)
     completed_at = Column(DateTime, nullable=True)
 
-    # Relationships
     assessment = relationship("CareerAssessment", back_populates="milestones")
 
 
 def init_db():
-    """Initializes tables in the SQLite database."""
     Base.metadata.create_all(bind=engine)
     print(f"[OK] Career Navigator database initialized at: {DB_PATH}")
 
@@ -88,7 +73,6 @@ def save_student_assessment(
     """Saves student profile, academic assessment, and seeds interactive roadmap tasks."""
     session = SessionLocal()
     try:
-        # Find or create student
         student = session.query(Student).filter(Student.email == email).first()
         if not student:
             student = Student(
@@ -105,7 +89,6 @@ def save_student_assessment(
             if academic_year:
                 student.academic_year = academic_year
 
-        # Create assessment record
         assessment = CareerAssessment(
             student_id=student.id,
             predicted_role=predicted_role,
@@ -115,7 +98,6 @@ def save_student_assessment(
         session.add(assessment)
         session.flush()
 
-        # Parse and save roadmap milestones
         for idx, phase_text in enumerate(roadmap):
             lines = phase_text.strip().split("\n")
             title = lines[0] if lines else f"Phase {idx}"
@@ -139,7 +121,6 @@ def save_student_assessment(
 
 
 def get_student_profile_and_history(email: str) -> Optional[Dict[str, Any]]:
-    """Retrieves full student assessment history and roadmap progression."""
     session = SessionLocal()
     try:
         student = session.query(Student).filter(Student.email == email).first()
@@ -182,7 +163,6 @@ def get_student_profile_and_history(email: str) -> Optional[Dict[str, Any]]:
 
 
 def toggle_roadmap_milestone(milestone_id: int, is_completed: bool) -> bool:
-    """Toggles completion status for a specific roadmap milestone."""
     session = SessionLocal()
     try:
         milestone = session.query(RoadmapMilestone).filter(RoadmapMilestone.id == milestone_id).first()
@@ -207,7 +187,6 @@ def get_platform_analytics() -> Dict[str, Any]:
         total_students = session.query(func.count(Student.id)).scalar() or 0
         total_assessments = session.query(func.count(CareerAssessment.id)).scalar() or 0
 
-        # Career role distribution
         role_counts = (
             session.query(CareerAssessment.predicted_role, func.count(CareerAssessment.id))
             .group_by(CareerAssessment.predicted_role)
@@ -215,7 +194,6 @@ def get_platform_analytics() -> Dict[str, Any]:
         )
         role_dist = {r[0]: r[1] for r in role_counts}
 
-        # Branch distribution
         branch_counts = (
             session.query(Student.branch, func.count(Student.id))
             .group_by(Student.branch)
@@ -223,7 +201,6 @@ def get_platform_analytics() -> Dict[str, Any]:
         )
         branch_dist = {b[0]: b[1] for b in branch_counts}
 
-        # Milestone completion rate
         total_tasks = session.query(func.count(RoadmapMilestone.id)).scalar() or 0
         completed_tasks = (
             session.query(func.count(RoadmapMilestone.id))
