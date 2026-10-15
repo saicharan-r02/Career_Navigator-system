@@ -1,7 +1,6 @@
 import os
 from datetime import datetime
 from typing import Dict,Any,List,Optional
-
 from sqlalchemy import create_engine,Column,Integer,Float,String,Boolean,DateTime,JSON,ForeignKey,func
 from sqlalchemy.orm import declarative_base,sessionmaker,relationship,scoped_session
 
@@ -15,22 +14,22 @@ Base=declarative_base()
 
 
 class Student(Base):
-    __tablename__ = "students"
+    __tablename__="students"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    full_name = Column(String(100), default="Student")
-    email = Column(String(120), unique=True, index=True, nullable=False)
-    branch = Column(String(50), default="CSE")
-    academic_year = Column(String(20), default="3rd Year")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    id=Column(Integer,primary_key=True,autoincrement=True)
+    full_name=Column(String(100),default="Student")
+    email=Column(String(120),unique=True,index=True,nullable=False)
+    branch=Column(String(50),default="CSE")
+    academic_year=Column(String(20),default="3rd Year")
+    created_at=Column(DateTime,default=datetime.utcnow)
 
-    assessments = relationship("CareerAssessment", back_populates="student", cascade="all, delete-orphan")
+    assessments=relationship("CareerAssessment",back_populates="student",cascade="all,delete-orphan")
 
 
 class CareerAssessment(Base):
-    __tablename__ = "career_assessments"
+    __tablename__="career_assessments"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id=Column(Integer,primary_key=True, autoincrement=True)
     student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
     predicted_role = Column(String(100), nullable=False)
     pillar_stats = Column(JSON, default=dict)
